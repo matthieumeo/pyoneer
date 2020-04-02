@@ -1,0 +1,2 @@
+# pyoneer
+Pyoneer is a Python 3 package for the continuous recovery of non-bandlimited periodic signals with finite rates of innovation (e.g. Dirac streams) from generalised measurements. This package contains notably the reference implementation of *Cadzow Plug-and-play Gradient Descent (CPGD)*, a recently introduced algorithm with higher accuracy, efficiency and local fixed-point convergence guarantees. Legacy algorithms are also implemented for comparison purposes.
