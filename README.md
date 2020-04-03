@@ -44,7 +44,7 @@ These settings are stored in the hidden configuration file `~/.condarc`. Execute
 
 We can now install the relevant packages in the created environment:
 ```
-conda install -n pylocus -c conda-forge matplotlib numpy astropy h5py scipy joblib=0.13.0 numba pandas dask
+conda install -n pyoneer -c conda-forge matplotlib numpy astropy h5py scipy joblib=0.13.0 numba pandas dask
 ```
 We are done with the installation of dependencies. 
 >Note: On versions of joblib `>0.13.0`, we experienced worse performances with the backend `multiprocessing`. We hence recommend sticking with version `0.13.0` for now.
