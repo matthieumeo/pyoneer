@@ -1,4 +1,4 @@
-# pyoneer
+![alt text](pyoneer.png "pyoneer")
 ## Description
 `Pyoneer` is a [Python 3](https://www.python.org)  package for the continuous recovery of non-bandlimited periodic signals with finite rates of innovation (e.g. Dirac streams) from generalised measurements. This package contains notably the reference implementation of the *Cadzow Plug-and-play Gradient Descent (CPGD)* algorithm, proposed by by Matthieu Simeoni, Adrien Besson, Paul Hurley and Martin Vetterli in the paper [Cadzow Plug-and-Play Gradient Descent for Generalised FRI]() [1].
 
@@ -94,3 +94,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Acknowledgements
+We would like to thank Léa Freydier for designing the logo of the package.
