@@ -84,7 +84,7 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     results_dir = os.path.join(cwd, 'results', save_folder)
     if not os.path.isdir(results_dir):
-        os.mkdir(results_dir)
+        os.makedirs(results_dir, exist_ok=True)
 
     if run_simu:
         # Parameters
