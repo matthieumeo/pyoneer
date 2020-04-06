@@ -28,7 +28,6 @@ from pyoneer.operators.linear_operator import ToeplitzificationOperator, FRISamp
 from pyoneer.algorithms.genfri import GenFRIAlgorithm
 from pyoneer.algorithms.cpgd import CPGDAlgorithm
 
-
 def algorithmic_contest(data_noisy: np.ndarray, algo_names: list,
                         settings_cpgd: dict, settings_genfri: dict):
     # Input and output local variables
@@ -60,7 +59,7 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     results_dir = os.path.join(cwd, 'results', save_folder)
     if not os.path.isdir(results_dir):
-        os.mkdir(results_dir)
+        os.makedirs(results_dir, exist_ok=True)
 
     if run_simu:
         # Parameters

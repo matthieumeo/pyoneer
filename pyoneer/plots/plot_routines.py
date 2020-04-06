@@ -12,7 +12,7 @@ import numpy as np
 import pickle
 import os
 
-plt.style.use('pyoneer/plots/custom_style.mplstyle')
+plt.style.use(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'custom_style.mplstyle'))
 cmap = plt.get_cmap("tab10")
 
 
