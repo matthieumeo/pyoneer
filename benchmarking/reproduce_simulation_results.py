@@ -25,7 +25,7 @@ import numpy as np
 import os, datetime, time
 from joblib import Parallel, delayed
 import pyoneer.model.dirac_stream as mod
-from pyoneer.plots.plot_routines import simu_plots
+from plots.plot_routines import simu_plots
 from pyoneer.operators.linear_operator import ToeplitzificationOperator, FRISampling
 from scipy.linalg import lstsq
 from pyoneer.utils.fri import coeffs_to_matched_diracs

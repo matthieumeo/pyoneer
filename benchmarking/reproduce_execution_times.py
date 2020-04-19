@@ -23,7 +23,7 @@ import pickle
 import numpy as np
 import os, datetime
 import pyoneer.model.dirac_stream as mod
-from pyoneer.plots.plot_routines import timing_plots
+from benchmarking.plots.plot_routines import timing_plots
 from pyoneer.operators.linear_operator import ToeplitzificationOperator, FRISampling
 from pyoneer.algorithms.genfri import GenFRIAlgorithm
 from pyoneer.algorithms.cpgd import CPGDAlgorithm
