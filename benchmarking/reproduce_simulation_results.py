@@ -6,7 +6,7 @@
 """
 This script assesses the performances (positioning errors, execution times, number of iterations) of LS-Cadzow, CPGD and
 GenFRI for various oversampling parameters, peak signal-to-noise (PSNR) ratios and noise levels.
-This is also the script for reproducing the results of [Section V, 1].
+This is also the script for reproducing the results of [Section V.A, 1].
 * Results of the simulations are saved in the folder `../results`, in the subfolder specified by `save_folder`.
 * For re-running the simulations, set `run_simu` to True.
 * For re-generating the plots of past simulations, set `run_simu` to False and specify in `save_folder` the name of the
@@ -25,7 +25,7 @@ import numpy as np
 import os, datetime, time
 from joblib import Parallel, delayed
 import pyoneer.model.dirac_stream as mod
-from plots.plot_routines import simu_plots
+from benchmarking.plots.plot_routines import simu_plots
 from pyoneer.operators.linear_operator import ToeplitzificationOperator, FRISampling
 from scipy.linalg import lstsq
 from pyoneer.utils.fri import coeffs_to_matched_diracs

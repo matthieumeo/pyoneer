@@ -5,7 +5,7 @@
 # ############################################################################
 """
 This script compares the execution times of CPGD and GenFRI for various oversampling parameters.
-This is also the script for reproducing the results of [Section VI, 1].
+This is also the script for reproducing the results of [Section V.B, 1].
 * Results of the simulations are saved in the folder `../results`, in the subfolder specified by `save_folder`.
 * For re-running the simulations, set `run_simu` to True.
 * For re-generating the plots of past simulations, set `run_simu` to False and specify in `save_folder` the name of the
