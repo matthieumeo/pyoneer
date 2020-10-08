@@ -69,12 +69,12 @@ def loclocplot(K: int, recovered_locations: np.ndarray, dirac_locations: np.ndar
         color_marker_face[-1] = alpha
         plt.scatter(recovered_locations[j], dirac_locations[j], marker=marker, s=s, zorder=zorder,
                     c=np.array(color_marker_face)[None, :], linewidths=linewidths, edgecolors=cmap(j))
-        if mad_positions is not None:
-            plt.plot([recovered_locations[j] - mad_positions[j], recovered_locations[j] + mad_positions[j]],
-                     [dirac_locations[j], dirac_locations[j]], color=cmap(j), linewidth=linewidths + 1,
-                     linestyle=linestyle, zorder=zorder, alpha=alpha)
-        else:
-            pass
+        # if mad_positions is not None:
+        #     plt.plot([recovered_locations[j] - mad_positions[j], recovered_locations[j] + mad_positions[j]],
+        #              [dirac_locations[j], dirac_locations[j]], color=cmap(j), linewidth=linewidths + 1,
+        #              linestyle=linestyle, zorder=zorder, alpha=alpha)
+        # else:
+        #     pass
 
 
 def profiles_with_quantiles(x: np.ndarray, median: np.ndarray, percentile_bottom: np.ndarray,
@@ -165,6 +165,7 @@ def simu_plots(settings: str, results: str, save_folder: str, percentile: int = 
     dirac_locations = results_dict['dirac_locations']
     dirac_intensities = results_dict['dirac_intensities']
     data_noiseless_list = results_dict['data_noiseless_list']
+    low_pass_signal_list = results_dict['low_pass_signal_list']
 
     # Compute median and quatiles of the results
     median_results = np.median(store_results, axis=2)
@@ -187,10 +188,11 @@ def simu_plots(settings: str, results: str, save_folder: str, percentile: int = 
     for b in range(beta.size):
         # Plot diracs and noiseless samples
         plt.figure()
+        plt.plot(np.linspace(0, period, low_pass_signal_list[b].size), low_pass_signal_list[b], '-', color='silver')
         markerline, stemlines, baseline = plt.stem(sampling_locations, np.real(data_noiseless_list[b]) / N[b],
-                                                   linefmt='silver', markerfmt='D')
+                                                   linefmt='None', markerfmt='D')
         markerline.set_markerfacecolor('silver')
-        markerline.set_markeredgecolor('silver')
+        markerline.set_markeredgecolor('dimgray')
         plt.stem(dirac_locations, dirac_intensities, linefmt='dimgray')
         plt.scatter(dirac_locations, dirac_intensities, marker='o',
                     s=100, c=cmap(np.arange(dirac_intensities.size)), edgecolors='dimgray', zorder=4)

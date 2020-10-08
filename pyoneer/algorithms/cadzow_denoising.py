@@ -26,7 +26,7 @@ class CadzowAlgorithm(BaseReconstructionAlgorithm):
     :attribute rank: int
     Rank of the toeplitz matrix formed by the denoised Fourier series coefficients.
     :attribute rho: float
-    Maximal $\Gamma$-norm of the denoised Fourier series coefficients.
+    Maximal $\ell_2$-norm of the denoised Fourier series coefficients.
     :attribute tol: float
     Tolerance for the convergence of the low rank approximation algorithms. Only used if `backend` is 'scipy.sparse'.
     :attribute backend: str {numpy,scipy,scipy.sparse}
@@ -44,7 +44,7 @@ class CadzowAlgorithm(BaseReconstructionAlgorithm):
         :param rank: int
         Rank of the toeplitz matrix formed by the denoised Fourier series coefficients.
         :param rho: float
-        Maximal $\Gamma$-norm of the denoised Fourier series coefficients.
+        Maximal $\ell_2$-norm of the denoised Fourier series coefficients.
         :param tol: float
         Tolerance for the convergence of the low rank approximation algorithms. Only used if `backend` is 'scipy.sparse'.
         :param backend: str {numpy,scipy,scipy.sparse}
@@ -107,7 +107,7 @@ class CadzowAlgorithm(BaseReconstructionAlgorithm):
 
         Note: For efficiency reasons, the low rank approximation is implemented differently depending on the cases.
         """
-        x = self.proj_gamma_ball(x)
+        x = self.proj_l2_ball(x)
         conj_sym_coeffs = np.array_equal(np.flip(x), np.conj(x))
         x = build_toeplitz_operator(P=self.toeplitz_op.P, M=self.toeplitz_op.M, x=x, toeplitz_class=self.toeplitz_class,
                                     method=self.method)
@@ -135,16 +135,17 @@ class CadzowAlgorithm(BaseReconstructionAlgorithm):
         """
         return x
 
-    def proj_gamma_ball(self, x: np.ndarray) -> np.ndarray:
+    def proj_l2_ball(self, x: np.ndarray) -> np.ndarray:
         r"""
-        Project `x` on $\Gamma$-ball of radius `rho`.
+        Project `x` on $\ell2$-ball of radius `rho`.
         :param x: np.ndarray
         Input vector.
         :return: np.ndarray
         Projected vector.
         """
-        gamma_norm = np.linalg.norm(np.sqrt(self.toeplitz_op.gram) * x)
-        if gamma_norm <= self.rho:
+
+        norm = np.linalg.norm(x)
+        if norm <= self.rho:
             return x
         else:
-            return self.rho * x / gamma_norm
+            return self.rho * x / norm

@@ -26,12 +26,13 @@ import os, datetime, time
 from joblib import Parallel, delayed
 import pyoneer.model.dirac_stream as mod
 from benchmarking.plots.plot_routines import simu_plots
-from pyoneer.operators.linear_operator import ToeplitzificationOperator, FRISampling
+from pyoneer.operators.linear_operator import ToeplitzificationOperator, FRISampling, LinearOperatorFromMatrix
 from scipy.linalg import lstsq
 from pyoneer.utils.fri import coeffs_to_matched_diracs
 from pyoneer.algorithms.cadzow_denoising import CadzowAlgorithm
 from pyoneer.algorithms.genfri import GenFRIAlgorithm
 from pyoneer.algorithms.cpgd import CPGDAlgorithm
+from scipy.sparse.linalg import eigs
 
 
 def algorithmic_contest(data_noisy: np.ndarray, G: np.ndarray, K: int, period: np.float,
@@ -73,11 +74,28 @@ def algorithmic_contest(data_noisy: np.ndarray, G: np.ndarray, K: int, period: n
     return results, positions, times, iters
 
 
+def max_singular_value(G: LinearOperatorFromMatrix, eig_tol: float = 1e-8) -> float:
+    """
+    Compute the m
+    :param G:
+    :param eig_tol:
+    :return:
+    """
+    weighted_gram = 2 * G.gram
+    try:
+        beta = eigs(weighted_gram, k=1, which='LM', return_eigenvectors=False, tol=eig_tol)
+        beta *= (1 + eig_tol)
+    except Exception('Eigs solver did not converge, trying again with small tolerance...'):
+        beta = eigs(weighted_gram, k=1, which='LM', return_eigenvectors=False, tol=1e-3)
+        beta *= (1 + 1e-3)
+    return beta
+
+
 if __name__ == '__main__':
-    run_simu = True  # bool, Re-run simulations
+    run_simu = False  # bool, Re-run simulations
     filename_general_settings = 'general_settings.pickle'  # str, name of pickle file storing settings
     filename_results = 'results.pickle'  # str, name of pickle file storing results
-    save_folder = datetime.datetime.now().strftime("%d%m%Y-%H%M%S")  # str, name of folder in which to save the results.
+    save_folder = '08102020-141308'#datetime.datetime.now().strftime("%d%m%Y-%H%M%S")  # str, name of folder in which to save the results.
     # The results of the paper are saved in the folder  `../results/paper_simulation_results`.
 
     # Check if results folder exists or create it:
@@ -114,7 +132,7 @@ if __name__ == '__main__':
                           'seed': seed}
         settings_cpgd = {'nb_iter': 500, 'rank': K, 'nb_cadzow_iter': nb_cadzow_iter, 'denoise_verbose': False,
                          'nb_init': 1, 'tol': tol, 'eig_tol': eig_tol, 'tau_init_type': 'safest',
-                         'random_state': seed, 'cadzow_backend': backend_cadzow, 'tau_weight': 0.5}
+                         'random_state': seed, 'cadzow_backend': backend_cadzow}
         settings_genfri = {'nb_iter': 50, 'nb_init': 15, 'tol': tol, 'random_state': seed, 'rcond': 1e-4}
         settings_cadzow = {'nb_iter': nb_cadzow_iter, 'rank': K, 'tol': eig_tol, 'backend': backend_cadzow}
         settings_experiment = {'K': K, 'beta': beta, 'M': M, 'P': P, 'N': N, 'L': L, 'period': period, 'PSNR': PSNR,
@@ -139,6 +157,7 @@ if __name__ == '__main__':
         cond_numbers_list = []
         fs_coeff_list = []
         data_noiseless_list = []
+        low_pass_signal_list = []
 
         # Generate sampling locations and standardised noise.
         sampling_locations, _ = mod.rnd_innovations(L, t_end=period,
@@ -156,12 +175,16 @@ if __name__ == '__main__':
 
             # Generate the irregular sampling operator
             G = FRISampling(frequencies, sampling_locations, period)
+            settings_cpgd['beta'] = max_singular_value(G, eig_tol=eig_tol)
             cond_numbers_list.append(np.linalg.cond(G.mat))
             print(f'Cond. num. of G of size {G.shape}: {cond_numbers_list[-1]:.2f}')
             settings_cpgd['linear_op'] = G
             settings_genfri['linear_op'] = G
             data_noiseless = G(fs_coeff)
             data_noiseless_list.append(data_noiseless)
+            low_pass_signal = mod.sinc_samples(np.linspace(0, period, 1000), source_locs=locations,
+                                               intensities=intensities, M=M[n], period=period)
+            low_pass_signal_list.append(low_pass_signal)
 
             # Create Toeplitzification Operator
             Tp = ToeplitzificationOperator(P=P[n], M=M[n])
@@ -175,6 +198,8 @@ if __name__ == '__main__':
                     print(f'Iteration: {i}, PSNR: {psnr} dB')
                     noise_lvl = np.max(intensities) * np.exp(-psnr / 10)
                     data_noisy = data_noiseless[:, None] + noise_lvl * std_noise
+                    if n == N.size - 1:
+                        settings_cpgd['rho'] = np.linalg.norm(data_noisy)
                     list_multi = parallel(
                         delayed(algorithmic_contest)(data_noisy[:, k], G.mat, K, period, locations, algo_names,
                                                      settings_cadzow, settings_cpgd, settings_genfri)
@@ -191,8 +216,9 @@ if __name__ == '__main__':
         with open(os.path.join(results_dir, filename_results), 'wb') as file:
             results = {'store_results': store_results, 'store_positions': store_positions,
                        'store_times': store_times, 'store_iters': store_iters,
-                       'data_noiseless_list': data_noiseless_list, 'sampling_locations': sampling_locations,
-                       'dirac_locations': locations, 'dirac_intensities': intensities,
+                       'data_noiseless_list': data_noiseless_list, 'low_pass_signal_list': low_pass_signal_list,
+                       'sampling_locations': sampling_locations, 'dirac_locations': locations,
+                       'dirac_intensities': intensities,
                        'fs_coeff_list': fs_coeff_list, 'cond_numbers_list': cond_numbers_list}
             pickle.dump(results, file)
 

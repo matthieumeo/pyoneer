@@ -10,6 +10,7 @@ Under review.
 """
 
 import numpy as np
+from typing import Optional
 from pyoneer.algorithms.base_reconstruction_algorithm import BaseReconstructionAlgorithm
 from pyoneer.algorithms.cadzow_denoising import CadzowAlgorithm
 from pyoneer.operators.linear_operator import ToeplitzificationOperator, LinearOperatorFromMatrix
@@ -60,7 +61,7 @@ class CPGDAlgorithm(BaseReconstructionAlgorithm):
     def __init__(self, nb_iter: int, linear_op: LinearOperatorFromMatrix, toeplitz_op: ToeplitzificationOperator,
                  rank: int, nb_cadzow_iter: int = 20, denoise_verbose: bool = False, rho: float = np.Inf,
                  tol: float = 1e-6, eig_tol: float = 1e-8, init_sol: np.ndarray = None, tau: float = None,
-                 tau_init_type: str = 'safest', tau_weight: float = 1.5,
+                 tau_init_type: str = 'safest', tau_weight: float = 1.5, beta: Optional[float] = None,
                  nb_init: int = 1, random_state: int = 1, cadzow_backend: str = 'scipy'):
         """
         Initialize an object of the class.
@@ -109,13 +110,14 @@ class CPGDAlgorithm(BaseReconstructionAlgorithm):
         self.tol = tol
         self.eig_tol = eig_tol
         self.provided_init_sol = init_sol
-
+        self.beta = beta
         if tau is None:
             self.tau_weight = tau_weight
             self.init_tau(type=tau_init_type, weight=self.tau_weight)
         else:
             self.tau_weight = None
             self.tau = tau
+
         self.min_error = np.infty
         self.best_estimate = None
 
@@ -123,6 +125,8 @@ class CPGDAlgorithm(BaseReconstructionAlgorithm):
         self.denoise_verbose = denoise_verbose
         self.nb_cadzow_iter = nb_cadzow_iter
         self.cadzow_backend = cadzow_backend
+        self.preweight = 1 / np.sqrt(toeplitz_op.gram)
+        self.postweight = np.sqrt(toeplitz_op.gram)
         self.denoising_algorithm = CadzowAlgorithm(nb_iter=self.nb_cadzow_iter, toeplitz_op=self.toeplitz_op,
                                                    rank=self.rank, rho=self.rho, tol=self.eig_tol,
                                                    backend=self.cadzow_backend)
@@ -144,7 +148,7 @@ class CPGDAlgorithm(BaseReconstructionAlgorithm):
             if self.nb_init == 1:
                 init_sol = np.zeros(shape=(self.linear_op.shape[1],), dtype=np.complex128)
             else:
-                print('CPGDD randomly initialized!')
+                print('CPGD randomly initialized!')
                 init_sol = self.rng.standard_normal(self.linear_op.shape[1]) + 1j * self.rng.standard_normal(
                     self.linear_op.shape[1])
         return [init_sol, y]  # y is the data
@@ -160,25 +164,40 @@ class CPGDAlgorithm(BaseReconstructionAlgorithm):
         Note: To ensure convergence, we recommend using type='safest'. {'fastest','largest'} can improve convergence speed
         but can also sometimes make the algorithm diverge.
         """
-        gamma = self.toeplitz_op.gram
-        weighted_gram = 2 * np.sqrt(gamma[:, None]) * (self.linear_op.gram * (1 / np.sqrt(gamma[None, :])))
-        try:
-            beta = eigs(weighted_gram, k=1, which='LM', return_eigenvectors=False, tol=self.eig_tol)
-            beta *= (1 + self.eig_tol)
-        except Exception('Eigs solver did not converge, trying again with small tolerance...'):
-            beta = eigs(weighted_gram, k=1, which='LM', return_eigenvectors=False, tol=1e-3)
-            beta *= (1 + 1e-3)
+
+        P = self.toeplitz_op.P
+        weighted_gram = 2 * self.linear_op.gram
+        if self.beta is not None:
+            beta = self.beta
+        else:
+            try:
+                beta = eigs(weighted_gram, k=1, which='LM', return_eigenvectors=False, tol=self.eig_tol)
+                beta *= (1 + self.eig_tol)
+            except Exception('Eigs solver did not converge, trying again with small tolerance...'):
+                beta = eigs(weighted_gram, k=1, which='LM', return_eigenvectors=False, tol=1e-3)
+                beta *= (1 + 1e-3)
+        ub = 1 / beta * (1 + 1 / np.sqrt(P + 1))
+        lb = 1 / beta * (1 - 1 / np.sqrt(P + 1))
         if type == 'fastest':
             try:
                 alpha = eigs(weighted_gram, k=1, which='SM', return_eigenvectors=False, tol=self.eig_tol)
                 alpha *= (1 + self.eig_tol)
             except Exception('Eigs solver did not converge. Alpha is set to zero.'):
                 alpha = 0
-            self.tau = 2 / (beta + alpha)
+            tau_opt = 2 / (beta + alpha)
+            if (tau_opt <= ub) & (tau_opt >= lb):
+                self.tau = tau_opt
+            else:
+                min_lb = np.fmin(np.abs(1 - lb * alpha), np.abs(1 - lb * beta))
+                min_ub = np.fmin(np.abs(1 - ub * alpha), np.abs(1 - ub * beta))
+                if np.argmin([min_lb, min_ub]) == 0:
+                    self.tau = lb
+                else:
+                    self.tau = ub
         elif type == 'safest':
             self.tau = 1 / beta
         elif type == 'largest':
-            self.tau = 2 / beta
+            self.tau = ub
         else:
             self.tau = weight / beta
 
@@ -207,7 +226,7 @@ class CPGDAlgorithm(BaseReconstructionAlgorithm):
         if np.linalg.norm(self.x_old[0]) == 0:
             relative_improvement = np.infty
         else:
-            relative_improvement = np.linalg.norm(x[0] - self.x_old[0]) / np.linalg.norm(self.x_old[0])
+            relative_improvement = np.linalg.norm((x[0] - self.x_old[0])) / np.linalg.norm(self.x_old[0])
         stop_dict['relative_improvement'] = relative_improvement
         stop_dict["stop"] = (relative_improvement < self.tol)
         return stop_dict
